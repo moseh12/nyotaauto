@@ -1,0 +1,12 @@
+{
+  "name": "nyotafund-notification-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Scheduled Firebase Cloud Messaging promotions for opted-in Nyota Fund users",
+  "scripts": {
+    "start": "node bot.js",
+    "test:dry": "DRY_RUN=1 FORCE=1 node bot.js"
+  },
+  "engines": { "node": ">=20" }
+}
