@@ -1,33 +1,17 @@
 name: Nyota Fund Notifications
 
 on:
-  # Every 15 minutes, off the hour (bot.js cooldown decides when to actually send)
+  # Every 5 minutes; apps.json decides when a promo is actually sent
   schedule:
-    - cron: '4,19,34,49 * * * *'
+    - cron: '*/5 * * * *'
 
-  # Manual testing
+  # Manual run (dry run = preview only, nothing sent)
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'Notification mode'
-        required: true
-        default: 'test'
-        type: choice
-        options:
-          - test
-          - auto
       dry_run:
-        description: 'Preview without sending notifications'
+        description: 'Preview without sending'
         type: boolean
         default: true
-      only_app:
-        description: 'Only this app id (blank = all apps)'
-        type: string
-        default: ''
-      force:
-        description: 'Ignore quiet hours, daily limit and cooldown'
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -38,38 +22,29 @@ concurrency:
 
 jobs:
   send:
-    name: Send Nyota Fund Notifications
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
       - name: Run notification bot
         env:
           FCM_SERVICE_ACCOUNTS: ${{ secrets.FCM_SERVICE_ACCOUNTS }}
-          MODE: ${{ github.event_name == 'schedule' && 'auto' || inputs.mode || 'test' }}
-          DRY_RUN: ${{ github.event_name == 'schedule' && '0' || (inputs.dry_run && '1' || '0') }}
-          ONLY_APP: ${{ inputs.only_app }}
-          FORCE: ${{ inputs.force && '1' || '0' }}
-          # Test-mode pushes go here instead of to real users
-          
+          MODE: auto
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: node bot.js
 
-      # Runs even if one app failed, so successful sends are recorded
-      # (prevents the other apps from resending every run)
+      # Runs even if the bot step failed, so successful sends are recorded
       - name: Save notification state
-        if: ${{ !cancelled() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'auto' && !inputs.dry_run)) }}
+        if: ${{ !cancelled() && !inputs.dry_run }}
         run: |
           if [ -n "$(git status --porcelain -- state.json)" ]; then
             git config user.name "github-actions[bot]"
@@ -78,6 +53,4 @@ jobs:
             git commit -m "chore: update notification state"
             git pull --rebase origin main
             git push origin HEAD:main
-          else
-            echo "No notification state changes."
           fi
