@@ -1,13 +1,25 @@
 
 import { createSign } from 'node:crypto';
-
 import {
   readFileSync,
   writeFileSync,
   existsSync,
 } from 'node:fs';
 import dns from 'node:dns';
+import { Agent } from 'undici';
+
+// ========================================
+// NETWORK CONFIGURATION
+// ========================================
+
 dns.setDefaultResultOrder('ipv4first');
+
+const ipv4Agent = new Agent({
+  connect: {
+    family: 4,
+    timeout: 30000,
+  },
+});
 
 // ========================================
 // CONFIGURATION
@@ -19,7 +31,6 @@ const readJson = (file) =>
   );
 
 const config = readJson('./apps.json');
-
 const messagesData = readJson('./messages.json');
 const messages = messagesData.promo || [];
 
@@ -239,7 +250,8 @@ async function accessToken(serviceAccount) {
           'urn:ietf:params:oauth:grant-type:jwt-bearer',
         assertion,
       }),
-      signal: AbortSignal.timeout(30000),
+      dispatcher: ipv4Agent,
+      signal: AbortSignal.timeout(45000),
     });
   } catch (error) {
     throw networkError('Google OAuth', error);
@@ -270,7 +282,9 @@ async function accessToken(serviceAccount) {
     expiresAt: Date.now() + 50 * 60 * 1000,
   });
 
-  console.log('[AUTH] Google OAuth authentication successful.');
+  console.log(
+    '[AUTH] Google OAuth authentication successful.'
+  );
 
   return result.access_token;
 }
@@ -280,8 +294,7 @@ async function accessToken(serviceAccount) {
 // ========================================
 
 async function push(app, message) {
-  const topic =
-    app.topic || config.defaults.topic;
+  const topic = app.topic || config.defaults.topic;
 
   if (!topic) {
     throw new Error(
@@ -356,7 +369,8 @@ async function push(app, message) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(30000),
+      dispatcher: ipv4Agent,
+      signal: AbortSignal.timeout(45000),
     });
   } catch (error) {
     throw networkError('Firebase FCM', error);
@@ -407,9 +421,7 @@ async function main() {
   for (const app of apps) {
     try {
       const defaults = config.defaults;
-
       const clock = localClock(defaults.timezone);
-
       const appState = (state.apps[app.id] ??= {});
 
       const message =
@@ -449,8 +461,7 @@ async function main() {
         }
 
         const elapsed =
-          Date.now() -
-          (appState.lastSentAt || 0);
+          Date.now() - (appState.lastSentAt || 0);
 
         if (
           elapsed <
@@ -497,4 +508,8 @@ async function main() {
   console.log('\n[BOT] Execution finished.');
 }
 
-await main();
+try {
+  await main();
+} finally {
+  await ipv4Agent.close();
+}

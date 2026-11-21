@@ -8,5 +8,10 @@
     "start": "node bot.js",
     "test:dry": "DRY_RUN=1 FORCE=1 node bot.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "undici": "^7.30.2"
+  }
 }
