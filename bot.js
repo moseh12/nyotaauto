@@ -1,4 +1,3 @@
-
 import { createSign } from 'node:crypto';
 import {
   readFileSync,
@@ -6,7 +5,7 @@ import {
   existsSync,
 } from 'node:fs';
 import dns from 'node:dns';
-import { Agent } from 'undici';
+import { Agent, fetch } from 'undici';
 
 // ========================================
 // NETWORK CONFIGURATION
@@ -294,7 +293,10 @@ async function accessToken(serviceAccount) {
 // ========================================
 
 async function push(app, message) {
-  const topic = app.topic || config.defaults.topic;
+  const topic =
+    message.id === 'test' && process.env.TEST_TOPIC
+      ? process.env.TEST_TOPIC
+      : app.topic || config.defaults.topic;
 
   if (!topic) {
     throw new Error(
@@ -438,7 +440,7 @@ async function main() {
             );
 
       if (mode !== 'test' && !force) {
-        if (quiet(clock.hour, defaults.quietHours)) {
+        if (quiet(clock.hour, defaults.quietHours ?? { start: 0, end: 0 })) {
           console.log(
             `[SKIP] ${app.id}: quiet hours`
           );

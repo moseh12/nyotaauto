@@ -1,12 +1,11 @@
-
 name: Nyota Fund Notifications
 
 on:
-  # Run every 5 minutes, 24 hours a day
+  # Every 15 minutes, off the hour (bot.js cooldown decides when to actually send)
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '4,19,34,49 * * * *'
 
-  # Allow manual testing
+  # Manual testing
   workflow_dispatch:
     inputs:
       mode:
@@ -17,11 +16,18 @@ on:
         options:
           - test
           - auto
-
       dry_run:
         description: 'Preview without sending notifications'
         type: boolean
         default: true
+      only_app:
+        description: 'Only this app id (blank = all apps)'
+        type: string
+        default: ''
+      force:
+        description: 'Ignore quiet hours, daily limit and cooldown'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -37,67 +43,41 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      # 1. Download repository files
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
-      # 2. Configure Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      # 3. Install required dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4. Display execution information
-      - name: Show notification configuration
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          echo "================================"
-          echo "NYOTA FUND NOTIFICATIONS"
-          echo "================================"
-          echo "Event: $EVENT_NAME"
-          echo "Schedule: Every 5 minutes"
-          echo "Mode: Automatic for scheduled runs"
-          echo "================================"
-
-      # 5. Run Firebase notification bot
       - name: Run notification bot
         env:
-          NODE_OPTIONS: --dns-result-order=ipv4first
-
           FCM_SERVICE_ACCOUNTS: ${{ secrets.FCM_SERVICE_ACCOUNTS }}
-
           MODE: ${{ github.event_name == 'schedule' && 'auto' || inputs.mode || 'test' }}
-
           DRY_RUN: ${{ github.event_name == 'schedule' && '0' || (inputs.dry_run && '1' || '0') }}
-
+          ONLY_APP: ${{ inputs.only_app }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
+          # Test-mode pushes go here instead of to real users
+          TEST_TOPIC: test_devices
         run: node bot.js
 
-      # 6. Save notification state
+      # Runs even if one app failed, so successful sends are recorded
+      # (prevents the other apps from resending every run)
       - name: Save notification state
-        if: success() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'auto' && !inputs.dry_run))
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'auto' && !inputs.dry_run)) }}
         run: |
-          if ! git diff --quiet -- state.json; then
+          if [ -n "$(git status --porcelain -- state.json)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
             git add state.json
-            git commit -m "chore: update notification state [skip ci]"
+            git commit -m "chore: update notification state"
             git pull --rebase origin main
             git push origin HEAD:main
           else
             echo "No notification state changes."
           fi
-
-      # 7. Completion message
-      - name: Workflow completed
-        if: success()
-        run: |
-          echo "Nyota Fund notification workflow completed."
