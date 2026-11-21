@@ -63,7 +63,7 @@ jobs:
           ONLY_APP: ${{ inputs.only_app }}
           FORCE: ${{ inputs.force && '1' || '0' }}
           # Test-mode pushes go here instead of to real users
-          TEST_TOPIC: test_devices
+          
         run: node bot.js
 
       # Runs even if one app failed, so successful sends are recorded
