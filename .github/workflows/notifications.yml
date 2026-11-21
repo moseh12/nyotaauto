@@ -44,13 +44,16 @@ jobs:
         with:
           node-version: '22'
 
+      # Install dependencies including undici
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run bot
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
           FCM_SERVICE_ACCOUNTS: ${{ secrets.FCM_SERVICE_ACCOUNTS }}
           MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'auto' }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
-
         run: node bot.js
 
       - name: Save notification state
