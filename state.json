@@ -1,5 +1,10 @@
 {
   "apps": {
-    "nyotafund": {}
+    "nyotafund": {
+      "date": "2026-11-21",
+      "count": 1,
+      "lastSentAt": 1795226882459,
+      "lastMessageId": "applications_open"
+    }
   }
 }
