@@ -147,10 +147,15 @@ for (const app of config.apps.filter(a => a.enabled !== false && (!onlyApp || on
       appState.lastSentAt = Date.now();
       appState.lastMessageId = message.id;
     }
-  } catch (error) {
-    failures++;
-    console.error(`[ERROR] ${app.id}: ${error.message}`);
-  }
+    } catch (error) {
+  failures++;
+
+  console.error(`\n[ERROR] ${app.id}`);
+  console.error('Message:', error.message);
+  console.error('Cause:', error.cause ?? 'No additional cause');
+  console.error('Stack:', error.stack);
+}
+  
 }
 
 if (!dryRun && mode !== 'test') {
