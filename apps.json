@@ -3,9 +3,10 @@
     "timezone": "Africa/Nairobi",
     "topic": "nyotafund_users",
     "channelId": "nyota_fund_alerts",
-    "quietHours": { "start": 21, "end": 8 },
+    "quietHours": { "start": 0, "end": 0 },
+    
     "minimumMinutesBetweenPromotions": 5,
-    "maxPromotionsPerDay": 156,
+    "maxPromotionsPerDay": 288,
     "firstMessageId": "applications_open"
   },
   "apps": [
