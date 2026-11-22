@@ -2,9 +2,9 @@
   "apps": {
     "nyotafund": {
       "date": "2026-11-22",
-      "count": 125,
-      "lastSentAt": 1795359013753,
-      "lastMessageId": "funding_approvals4"
+      "count": 126,
+      "lastSentAt": 1795359323273,
+      "lastMessageId": "funding_approvals9"
     }
   }
 }
